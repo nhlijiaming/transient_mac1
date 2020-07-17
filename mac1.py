@@ -6,7 +6,7 @@ import numpy as np
 import mac1_model
 
 class Machine1:
-    def __init__(self, n_layers=2, hidden_dim=400,n_training_sample=1600, data_len=900, batchsize=400, gradient_clip=0.0001, teacher_forcing_ratio_decay=True, teacher_forcing_ratio=0.75, verbose_output=False):
+    def __init__(self, n_layers=2, hidden_dim=400,n_training_sample=1600, data_len=900, batchsize=400, gradient_clip=0.0001, teacher_forcing_ratio_decay=True, teacher_forcing_ratio=0.75, data_interpolation_rate=None, verbose_output=False):
 
         self.n_training_sample = n_training_sample
         self.data_len = data_len
@@ -25,7 +25,7 @@ class Machine1:
         self.label_format = self.label_structure()
         
         # Load data
-        self.load_data(self.n_training_sample, apply_mac_ang_filter=True)
+        self.load_data(self.n_training_sample, apply_mac_ang_filter=True, data_interpolation_rate=data_interpolation_rate, verbose_output=verbose_output)
         
         # Setting up random seed
         torch.manual_seed(20200410)
@@ -84,7 +84,7 @@ class Machine1:
         self.loss_curve = checkpoint['loss_curve']
         
 
-    def load_data(self, n_training_sample, apply_mac_ang_filter=True, verbose=False):
+    def load_data(self, n_training_sample, apply_mac_ang_filter, data_interpolation_rate, verbose_output):
         # Data pre-processing
         np.random.seed(20200412)
         data_len = self.data_len
@@ -99,7 +99,7 @@ class Machine1:
         # format: data['variable name'] [0] [sample index] [0] [time step]
         # e.g.: print(data['bus_v']     [0]     [432]      [0]   [124])
         
-        if verbose:
+        if verbose_output:
             print('Components in the dataset:', data.dtype.names)
             print('Dataset has {:d} trajectories.'.format(data.shape[1]))
         
@@ -110,11 +110,11 @@ class Machine1:
         for i in sample_idx[:4500]:
             filename = data['filename'][0][i][0]
             if apply_mac_ang_filter and (filename.find('a5a') > -1 or filename.find('a5.') > -1):
-                if verbose:
+                if verbose_output:
                     print('{:s} was skipped because it contains a line-5 fault.'.format(data['filename'][0][i][0]))
                 continue
             
-            tmp_train_data, tmp_train_label = self.extract_data(i, data_len)
+            tmp_train_data, tmp_train_label = self.extract_data(i, data_len, data_interpolation_rate)
 
             train_data[:, n_entry, :] = tmp_train_data
             train_label_raw[:, n_entry, :] = tmp_train_label
@@ -134,11 +134,11 @@ class Machine1:
         for i in sample_idx[4800:]:
             filename = data['filename'][0][i][0]
             if apply_mac_ang_filter and (filename.find('a5a') > -1 or filename.find('a5.') > -1):
-                if verbose:
+                if verbose_output:
                     print('{:s} was skipped because it contains a line-5 fault.'.format(data['filename'][0][i][0]))
                 continue
 
-            tmp_test_data, tmp_test_label = self.extract_data(i, data_len)
+            tmp_test_data, tmp_test_label = self.extract_data(i, data_len, data_interpolation_rate)
                 
             test_data[:, n_entry, :] = tmp_test_data
             test_label_raw[:, n_entry, :] = tmp_test_label
@@ -172,7 +172,7 @@ class Machine1:
         train_label = (train_label_raw - label_mean) / label_std
         test_label = (test_label_raw - label_mean) / label_std
         
-        if verbose:
+        if verbose_output:
             print('Train data set size:', train_data.shape)
             print('Train label set size:', train_label.shape)
             print('Train data set size:', train_data.shape)
@@ -189,7 +189,7 @@ class Machine1:
         self.data_mean = data_mean
         self.data_std = data_std
         
-    def extract_data(self, index, data_len):
+    def extract_data(self, index, data_len, data_interpolation_rate):
         # Extract quantities from index-th case
         data = self.data
         
@@ -209,6 +209,19 @@ class Machine1:
         bus2_ang = np.unwrap(np.angle(bus2).reshape(-1)).reshape(-1,1)
         tmp_data = np.hstack([np.abs(bus_v), bus_v_ang, np.abs(cur), cur_ang, mac_ang, mac_spd, pelect, pmech, qelect, np.abs(bus2), bus2_ang])
         tmp_data = tmp_data[:data_len+1, :]
+        
+        # Interpolation
+        if data_interpolation_rate:
+            # Move the fault time position
+            clip = np.random.randint(low=50,high=97)
+            tmp_data = tmp_data[clip:, :]
+            
+            tmp_data_p = np.zeros((data_len+1, tmp_data.shape[1]))
+            for i in range(tmp_data.shape[1]):
+                x = np.arange(0.0,data_len/100,0.01/data_interpolation_rate)
+                xp = np.arange(0.0,tmp_data[:, i].shape[0]/100-1e-4,0.01)
+                tmp_data_p[:, i] = np.interp(x, xp, tmp_data[:, i])[:data_len+1]
+            tmp_data = tmp_data_p
 
         # delete the first sample(shift the curve left)
         tmp_label = np.delete(tmp_data, 0, 0)  
