@@ -2,6 +2,9 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## 2020-07-16
+Modularization
+
 ## 2020-07-12
 Changelog created.
 
