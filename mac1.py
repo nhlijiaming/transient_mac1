@@ -189,7 +189,7 @@ class Machine1:
         self.data_mean = data_mean
         self.data_std = data_std
         
-    def extract_data(self, index, data_len, data_interpolation_rate):
+    def extract_data(self, index, data_len, data_interpolation_rate, clip=None):
         # Extract quantities from index-th case
         data = self.data
         
@@ -208,12 +208,13 @@ class Machine1:
         cur_ang = np.unwrap(np.angle(cur).reshape(-1)).reshape(-1,1)
         bus2_ang = np.unwrap(np.angle(bus2).reshape(-1)).reshape(-1,1)
         tmp_data = np.hstack([np.abs(bus_v), bus_v_ang, np.abs(cur), cur_ang, mac_ang, mac_spd, pelect, pmech, qelect, np.abs(bus2), bus2_ang])
-        tmp_data = tmp_data[:data_len+1, :]
+        tmp_data = tmp_data[120:120+data_len+1, :]
         
         # Interpolation
         if data_interpolation_rate:
             # Move the fault time position
-            clip = np.random.randint(low=50,high=97)
+            if clip is None:
+                clip = np.random.randint(low=50,high=97)
             tmp_data = tmp_data[clip:, :]
             
             tmp_data_p = np.zeros((data_len+1, tmp_data.shape[1]))

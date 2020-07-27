@@ -2,10 +2,13 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## 2020-07-27
+Switched to post-clearance data
+
 ## 2020-07-16
 Modularization
 
-Added in intepolation: x5
+Added in interpolation: x5
 
 ## 2020-07-12
 Changelog created.

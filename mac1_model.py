@@ -10,6 +10,10 @@ class LSTMNetwork(nn.Module):
         self.device = device
 
         self.lstm = nn.LSTM(input_size=11, hidden_size=self.hidden_dim, num_layers=self.n_layers)
+        
+#         self.lstm1 = nn.LSTM(input_size=11, hidden_size=400)
+#         self.lstm2 = nn.LSTM(input_size=400, hidden_size=self.hidden_dim)
+        
 #         self.gru = nn.GRU(input_size=10, hidden_size=self.hidden_dim, num_layers=self.n_layers)
 
         self.outputlayer = nn.Linear(self.hidden_dim, 7)
@@ -21,11 +25,13 @@ class LSTMNetwork(nn.Module):
         # LSTM
         (hidden_state, cell_state) = (None, None) if states is None else states
         if hidden_state is None:
-            hidden_state = torch.zeros(self.n_layers, data_batch, self.hidden_dim).to(self.device)
+            hidden_state = torch.zeros(self.n_layers, data_batch, 400).to(self.device)
         if cell_state is None:
-            cell_state = torch.zeros(self.n_layers, data_batch, self.hidden_dim).to(self.device)
+            cell_state = torch.zeros(self.n_layers, data_batch, 400).to(self.device)
 
         rnn_out, (hidden_state, cell_state) = self.lstm(x, (hidden_state, cell_state))
+#         rnn1_out, (hidden_state[[0],:,:], cell_state[[0],:,:]) = self.lstm1(x, (hidden_state[[0],:,:], cell_state[[0],:,:]))
+#         rnn_out, (hidden_state[[1],:,:self.hidden_dim], cell_state[[1],:,:self.hidden_dim]) = self.lstm2(rnn1_out, (hidden_state[[1],:,:self.hidden_dim], cell_state[[1],:,:self.hidden_dim]))
         states = (hidden_state, cell_state)
 
         # GRU
