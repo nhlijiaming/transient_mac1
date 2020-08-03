@@ -14,7 +14,11 @@ class Machine1:
         
         self.gradient_clip = gradient_clip # options: 0.002, 0.0005, 0.0001
 
-        self.criterion = nn.MSELoss()
+        def MSELoss(s1, s2, weight=10.0):
+            return (F.mse_loss(s1, s2) + weight*F.mse_loss(s1[:,:,1], s2[:,:,1]))
+#         self.criterion = nn.MSELoss()
+        print('Weighted * 10')
+        self.criterion = MSELoss
         self.trained_epochs = 1
         self.loss_curve = []
         self.teacher_forcing_ratio_decay = True
@@ -94,7 +98,7 @@ class Machine1:
         
         # Loading .mat file
         import scipy.io as sio
-        self.data = sio.loadmat('/home/jeff/Desktop/transient/mac1/data_mac1_full_wBus2.mat')['data']
+        self.data = sio.loadmat('data_mac1_full_wBus2.mat')['data']
         data = self.data
         # format: data['variable name'] [0] [sample index] [0] [time step]
         # e.g.: print(data['bus_v']     [0]     [432]      [0]   [124])
@@ -236,7 +240,7 @@ class Machine1:
 
         return tmp_data, tmp_label
         
-    def test(self, data_torch, label_torch, test_batchsize = 400):
+    def test(self, data_torch, label_torch, test_batchsize = 200):
         model, device = self.model, self.device
         loss = None
         prediction = None
@@ -263,7 +267,7 @@ class Machine1:
                 prediction = pred if prediction is None else np.concatenate([prediction, pred], axis=1)
         return loss.mean(), prediction
 
-    def evaluation(self, eval_data_torch, eval_label_raw, eval_batchsize = 400):
+    def evaluation(self, eval_data_torch, eval_label_raw, eval_batchsize = 200):
         model, device = self.model, self.device
         t_max = self.data_len
         samples = eval_data_torch.shape[1]
@@ -300,7 +304,7 @@ class Machine1:
                         
                         truth_curve = eval_label_raw[:t_max, i+b, q]
                         pred_curve = output_data[:t_max, b, q]
-                        rse[i+b,q] = np.linalg.norm(truth_curve - pred_curve, 2)/ (np.linalg.norm(truth_curve-truth_curve.mean(), 2) + 1e-6)
+                        rse[i+b,q] = np.linalg.norm(truth_curve - pred_curve, 2) / (np.linalg.norm(truth_curve-truth_curve.mean(), 2) + 1e-6)
         return rse
 
     def weights_init(self, m):

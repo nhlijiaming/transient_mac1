@@ -2,6 +2,10 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+
+## 2020-08-03
+Dedicated/Shared LSTM network(not fully dedicated, loss function is shared).
+
 ## 2020-07-27
 Switched to post-clearance data
 
