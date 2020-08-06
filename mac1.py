@@ -6,7 +6,7 @@ import numpy as np
 import mac1_model
 
 class Machine1:
-    def __init__(self, n_layers=2, hidden_dim=400,n_training_sample=1600, data_len=900, batchsize=400, gradient_clip=0.0001, teacher_forcing_ratio_decay=True, teacher_forcing_ratio=0.75, data_interpolation_rate=None, verbose_output=False):
+    def __init__(self, n_layers=2, hidden_dim=[400,400],n_training_sample=1600, data_len=900, batchsize=400, gradient_clip=0.0001, teacher_forcing_ratio_decay=True, teacher_forcing_ratio=0.75, data_interpolation_rate=None, verbose_output=False):
 
         self.n_training_sample = n_training_sample
         self.data_len = data_len
@@ -14,10 +14,10 @@ class Machine1:
         
         self.gradient_clip = gradient_clip # options: 0.002, 0.0005, 0.0001
 
-        def MSELoss(s1, s2, weight=10.0):
-            return (F.mse_loss(s1, s2) + weight*F.mse_loss(s1[:,:,1], s2[:,:,1]))
+        def MSELoss(s1, s2, weight=0.0):
+            return (F.mse_loss(s1, s2))# + weight*F.mse_loss(s1[:,:,1], s2[:,:,1]))
 #         self.criterion = nn.MSELoss()
-        print('Weighted * 10')
+#         print('Weighted * 10')
         self.criterion = MSELoss
         self.trained_epochs = 1
         self.loss_curve = []
@@ -168,11 +168,8 @@ class Machine1:
         test_data = (test_data - data_mean) / data_std
 
         # normalize label
-        label_mean = np.mean(train_label_raw.reshape(n_training_sample*data_len,-1), axis=0)
-        label_std = np.std(train_label_raw.reshape(n_training_sample*data_len,-1), axis=0)
-        label_std[np.less(label_std, 1e-7)] = 1e-7
-#         label_mean = data_mean[[0,1,4,5,6,7,8]]
-#         label_std = data_std[[0,1,4,5,6,7,8]]
+        label_mean = data_mean[[0,1,4,5,6,7,8]]
+        label_std = data_std[[0,1,4,5,6,7,8]]
         train_label = (train_label_raw - label_mean) / label_std
         test_label = (test_label_raw - label_mean) / label_std
         
@@ -212,7 +209,7 @@ class Machine1:
         cur_ang = np.unwrap(np.angle(cur).reshape(-1)).reshape(-1,1)
         bus2_ang = np.unwrap(np.angle(bus2).reshape(-1)).reshape(-1,1)
         tmp_data = np.hstack([np.abs(bus_v), bus_v_ang, np.abs(cur), cur_ang, mac_ang, mac_spd, pelect, pmech, qelect, np.abs(bus2), bus2_ang])
-        tmp_data = tmp_data[120:120+data_len+1, :]
+        tmp_data = tmp_data[:data_len+1, :]
         
         # Interpolation
         if data_interpolation_rate:
