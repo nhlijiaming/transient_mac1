@@ -8,7 +8,7 @@ class LSTMNetwork(nn.Module):
         self.n_layers = n_layers
         self.hidden_dim1 = hidden_dim[0]
         self.hidden_dim2 = hidden_dim[1]
-        self.hidden_dim_a = 128
+        self.hidden_dim_a = 192
         self.device = device
         self.train_initial_memory = False
 

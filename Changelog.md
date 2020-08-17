@@ -2,6 +2,11 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## 2020-08-17
+Dedicated LSTM network, current injection is from predicted voltage busv_53 (not ground truth) with ground truth busv_2.
+Settings: Full trajectories, interpolation x5, length 700 time steps, random start.
+Tuned LSTM Networks: 192 -> 192(Va, mac_ang); 256 -> 256(others)
+
 ## 2020-08-06
 Dedicated LSTM network
 Settings: Full trajectories, interpolation x5, length 700 time steps, random start.
