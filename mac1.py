@@ -14,11 +14,11 @@ class Machine1:
         
         self.gradient_clip = gradient_clip # options: 0.002, 0.0005, 0.0001
 
-        def MSELoss(s1, s2, weight=0.0):
-            return (F.mse_loss(s1, s2))# + weight*F.mse_loss(s1[:,:,1], s2[:,:,1]))
-#         self.criterion = nn.MSELoss()
+#         def MSELoss(s1, s2, weight=0.0):
+#             return (F.mse_loss(s1, s2))# + weight*F.mse_loss(s1[:,:,1], s2[:,:,1]))
 #         print('Weighted * 10')
-        self.criterion = MSELoss
+#         self.criterion = MSELoss
+        self.criterion = nn.MSELoss()
         self.trained_epochs = 1
         self.loss_curve = []
         self.teacher_forcing_ratio_decay = True
@@ -108,7 +108,7 @@ class Machine1:
             print('Dataset has {:d} trajectories.'.format(data.shape[1]))
         
         # Select training data
-        train_data = np.zeros((data_len, n_training_sample, 11), dtype=np.float64)
+        train_data = np.zeros((data_len, n_training_sample, 9), dtype=np.float64)
         train_label_raw = np.zeros((data_len, n_training_sample, 7), dtype=np.float64)
         n_entry = 0
         for i in sample_idx[:4500]:
@@ -131,7 +131,7 @@ class Machine1:
         del tmp_train_label
 
         # Select validation data
-        test_data = np.zeros((data_len, 400, 11), dtype=np.float64)
+        test_data = np.zeros((data_len, 400, 9), dtype=np.float64)
         test_label_raw = np.zeros((data_len, 400, 7), dtype=np.float64)
 
         n_entry = 0
@@ -168,8 +168,8 @@ class Machine1:
         test_data = (test_data - data_mean) / data_std
 
         # normalize label
-        label_mean = data_mean[[0,1,4,5,6,7,8]]
-        label_std = data_std[[0,1,4,5,6,7,8]]
+        label_mean = data_mean[[0,1,2,3,4,5,6]]
+        label_std = data_std[[0,1,2,3,4,5,6]]
         train_label = (train_label_raw - label_mean) / label_std
         test_label = (test_label_raw - label_mean) / label_std
         
@@ -195,7 +195,7 @@ class Machine1:
         data = self.data
         
         bus_v = data['bus_v'][0][index].reshape(-1, 1)
-        cur = data['cur'][0][index].reshape(-1, 1)
+#         cur = data['cur'][0][index].reshape(-1, 1)
 #         bus_freq = data['bus_freq'][0][index].reshape(-1, 1)
         mac_ang = data['mac_ang'][0][index].reshape(-1, 1)
         mac_spd = data['mac_spd'][0][index].reshape(-1, 1)
@@ -206,9 +206,10 @@ class Machine1:
         length = qelect.shape[0]
 
         bus_v_ang = np.unwrap(np.angle(bus_v).reshape(-1)).reshape(-1,1)
-        cur_ang = np.unwrap(np.angle(cur).reshape(-1)).reshape(-1,1)
+#         cur_ang = np.unwrap(np.angle(cur).reshape(-1)).reshape(-1,1)
         bus2_ang = np.unwrap(np.angle(bus2).reshape(-1)).reshape(-1,1)
-        tmp_data = np.hstack([np.abs(bus_v), bus_v_ang, np.abs(cur), cur_ang, mac_ang, mac_spd, pelect, pmech, qelect, np.abs(bus2), bus2_ang])
+#         tmp_data = np.hstack([np.abs(bus_v), bus_v_ang, np.abs(cur), cur_ang, mac_ang, mac_spd, pelect, pmech, qelect, np.abs(bus2), bus2_ang])
+        tmp_data = np.hstack([np.abs(bus_v), bus_v_ang, mac_ang, mac_spd, pelect, pmech, qelect, np.abs(bus2), bus2_ang])
         tmp_data = tmp_data[:data_len+1, :]
         
         # Interpolation
@@ -229,8 +230,7 @@ class Machine1:
         tmp_label = np.delete(tmp_data, 0, 0)  
 
         # delete the currents(we don't need to predict that)
-        tmp_label = np.delete(tmp_label, np.arange(9, 11), 1)
-        tmp_label = np.delete(tmp_label, np.arange(2, 4), 1)
+        tmp_label = np.delete(tmp_label, np.arange(7, 9), 1)
         
         # delete the last sample because there's no corresponding label
         tmp_data = np.delete(tmp_data, -1, 0)  
@@ -283,10 +283,8 @@ class Machine1:
                     
                     # construct mini-batch data
                     if t<t_max-1:
-                        input_data_torch = torch.cat((output_data_torch[0,:,0:2],
-                                                  eval_data_torch[t+1,i:i+eval_batchsize,2:4].to(device), 
-                                                  output_data_torch[0,:,2:7], 
-                                                  eval_data_torch[t+1,i:i+eval_batchsize,9:11].to(device)
+                        input_data_torch = torch.cat((output_data_torch[0,:,0:7],
+                                                  eval_data_torch[t+1,i:i+eval_batchsize,7:9].to(device)
                                                  ), dim=1).reshape(1,eval_batchsize,-1)
                 
                 # de-normalize before computing Relative RMSE
@@ -348,8 +346,8 @@ class Machine1:
                     # construct input data from previous output and external dataset
                     inputs = train_data_torch[t, j:j+batchsize, :].reshape(1,batchsize,-1).clone().to(device)
                     if t>0:
-                        # teacher forcing: replacing inputs with ground truth
-                        inputs[:,:,[0,1,4,5,6,7,8]] = outputs[0,:,[0,1,2,3,4,5,6]].detach()
+                        # not teacher forcing: replacing inputs with ground truth
+                        inputs[:,:,[0,1,2,3,4,5,6]] = outputs[0,:,[0,1,2,3,4,5,6]].detach()
 
                     # forward
                     outputs, rnn_states = model(inputs, rnn_states)
@@ -373,23 +371,8 @@ class Machine1:
         
     class data_structure:
         def __init__(self):
-            self.bus_v_mag = 0
-            self.bus_v_ang = 1
-            self.cur_mag = 2
-            self.cur_ang = 3
-            self.mac_ang = 4
-            self.mac_spd = 5
-            self.pelect = 6
-            self.pmech = 7
-            self.qelect = 8
-            self.bus2_mag = 9
-            self.bus2_ang = 10
-            self.bus_v = [self.bus_v_mag, self.bus_v_ang]
-            self.cur = [self.cur_mag, self.cur_ang]
-            self.bus2 = [self.bus2_mag, self.bus2_ang]
-
-    class label_structure:
-        def __init__(self):
+            
+            # Iterative Data
             self.bus_v_mag = 0
             self.bus_v_ang = 1
             self.mac_ang = 2
@@ -397,4 +380,29 @@ class Machine1:
             self.pelect = 4
             self.pmech = 5
             self.qelect = 6
+            
+            # External Data
+            self.bus2_mag = 7
+            self.bus2_ang = 8
+            
+            self.n = 9
+            self.bus_v = [self.bus_v_mag, self.bus_v_ang]
+            self.bus2 = [self.bus2_mag, self.bus2_ang]
+
+    class label_structure:
+        def __init__(self):
+            
+            # Iterative output
+            self.bus_v_mag = 0
+            self.bus_v_ang = 1
+            self.mac_ang = 2
+            self.mac_spd = 3
+            self.pelect = 4
+            self.pmech = 5
+            self.qelect = 6
+            
+            # External Output
+            # none
+            
+            self.n = 7
             self.bus_v = [self.bus_v_mag, self.bus_v_ang]

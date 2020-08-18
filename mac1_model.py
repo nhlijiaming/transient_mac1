@@ -14,9 +14,9 @@ class LSTMNetwork(nn.Module):
 
 #         self.lstm = nn.LSTM(input_size=11, hidden_size=self.hidden_dim, num_layers=self.n_layers)
         
-        self.lstm1 = nn.LSTM(input_size=11, hidden_size=self.hidden_dim1)
+        self.lstm1 = nn.LSTM(input_size=9, hidden_size=self.hidden_dim1)
         self.lstm2 = nn.LSTM(input_size=self.hidden_dim1, hidden_size=self.hidden_dim2)
-        self.lstm_a1 = nn.LSTM(input_size=11, hidden_size=self.hidden_dim_a)
+        self.lstm_a1 = nn.LSTM(input_size=9, hidden_size=self.hidden_dim_a)
         self.lstm_a2 = nn.LSTM(input_size=self.hidden_dim_a, hidden_size=self.hidden_dim_a)
         
 #         self.gru = nn.GRU(input_size=10, hidden_size=self.hidden_dim, num_layers=self.n_layers)
